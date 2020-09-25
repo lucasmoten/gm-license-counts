@@ -1,24 +1,25 @@
 #/bin/bash
 
 projects=$(kubectl get project -o json | jq -r '.items[].metadata.name')
-
-while read -r lineproject
-do
-echo "------------------------------------------------------------"
 tfabric=0
 tsense=0
 tdata=0
 tmicroservice=0
-echo "Project/Namespace: $lineproject"
+tstandalone=0
+while read -r lineproject
+do
+echo "-------------------------------------------------------------------------------------"
+#echo "Project/Namespace: $lineproject"
 oc project $lineproject
 cfabric=0
 csense=0
 cdata=0
 cmicroservice=0
+cstandalone=0
 pods=$(kubectl get pods -o json | jq -r '.items[].metadata.name')
 while read -r linepod
 do
-echo "  Pod: $linepod"
+#echo "  Pod: $linepod"
 images=$(kubectl get pod $linepod -o json | jq -r '.spec.containers[].image')
 cgmcontrol=0
 cgmcontrolapi=0
@@ -34,7 +35,7 @@ clen=0
 cedge=0
 while read -r lineimage
 do
-echo "    Image: $lineimage"
+#echo "    Image: $lineimage"
 clen=$((clen+1))
 if [[ $lineimage == *"/gm-control:"* ]]; then
   cgmcontrol=$((cgmcontrol+1)) 
@@ -71,57 +72,61 @@ if [[ $linepod == "edge-"* ]]; then
 fi
 done < <(printf '%s\n' "$images")  
 if [[ cgmcontrol -gt 0 ]]; then
-echo "    Type: Fabric"
-cfabric=$((cfabric+1))
+  licensetype="Fabric"
+  cfabric=$((cfabric+1))
 elif [[ cgmcontrolapi -gt 0 ]]; then
-echo "    Type: Fabric"
-cfabric=$((cfabric+1))
+  licensetype="Fabric"
+  cfabric=$((cfabric+1))
 elif [[ cgmjwtsecurity -gt 0 ]]; then
-echo "    Type: Fabric"
-cfabric=$((cfabric+1))
+  licensetype="Fabric"
+  cfabric=$((cfabric+1))
 elif [[ cprometheus -gt 0 ]]; then
-echo "    Type: Fabric"
-cfabric=$((cfabric+1))
+  licensetype="Fabric"
+  cfabric=$((cfabric+1))
 elif [[ cgmcatalog -gt 0 ]]; then
-echo "    Type: Sense"
-csense=$((csense+1))
+  licensetype="Sense"
+  csense=$((csense+1))
 elif [[ cgmdashboard -gt 0 ]]; then
-echo "    Type: Sense"
-csense=$((csense+1))
+  licensetype="Sense"
+  csense=$((csense+1))
 elif [[ cgmslo -gt 0 ]]; then
-echo "    Type: Sense"
-csense=$((csense+1))
+  licensetype="Sense"
+  csense=$((csense+1))
 elif [[ cgmdata -gt 0 ]]; then
   if [[ cinternal -gt 0 ]]; then 
-    echo "    Type: Fabric"
+    licensetype="Fabric"
     cfabric=$((cfabric+1))
   else
-    echo "    Type: Data"
+    licensetype="Data"
     cdata=$((cdata+1))
   fi
 elif [[ cgmproxy -gt 0 ]]; then
   if [[ clen -gt 1 ]]; then
-    echo "    Type: Microservice"
+    licensetype="Microservice"
     cmicroservice=$((cmicroservice+1))
   elif [[ cedge -gt 0 ]]; then
-    echo "    Type: Fabric"
+    licensetype="Fabric"
     cfabric=$((cfabric+1))
   else
-    echo "    Type: Microservice"
+    licensetype="Microservice"
     cmicroservice=$((cmicroservice+1))
   fi
 else
-  echo "    Type: Standalone"
+  licensetype="Standalone"
+  cstandalone=$((cstandalone+1))
 fi
+printf "%-30s %-70s %-20s
+" "${lineproject}" "${linepod}" "${licensetype}"
 done < <(printf '%s\n' "$pods")
-echo "------------------------------------------------------------"
+echo "-------------------------------------------------------------------------------------"
 echo "Total for Project/Namespace: $lineproject"
-echo "fabric: $cfabric   sense: $csense   data: $cdata   microservice: $cmicroservice"
+echo "fabric: $cfabric   sense: $csense   data: $cdata   microservice: $cmicroservice   standalone: $cstandalone"
 tfabric=$((tfabric+cfabric))
 tsense=$((tsense+csense))
 tdata=$((tdata+cdata))
 tmicroservice=$((tmicroservice+cmicroservice))
+tstandalone=$((tstandalone+cstandalone))
 done < <(printf '%s\n' "$projects")
-echo "------------------------------------------------------------"
+echo "-------------------------------------------------------------------------------------"
 echo "Totals"
-echo "fabric: $tfabric   sense: $tsense   data: $tdata   microservice: $tmicroservice"
+echo "fabric: $tfabric   sense: $tsense   data: $tdata   microservice: $tmicroservice   standalone: $tstandalone"
