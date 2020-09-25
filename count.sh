@@ -63,7 +63,7 @@ fi
 if [[ $lineimage == *"/gm-proxy:"* ]]; then
   cgmproxy=$((cgmproxy+1)) 
 fi
-if [[ $linepod == "internal-"* ]]; then
+if [[ $linepod == *"internal-"* ]]; then
   cinternal=$((cinternal+1)) 
 fi
 if [[ $linepod == "edge-"* ]]; then
