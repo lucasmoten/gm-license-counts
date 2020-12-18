@@ -54,7 +54,7 @@ JSON Output File: mesh.greymatter.io-license-counts.2020-12-17.json
 CSV Output File: mesh.greymatter.io-license-counts.2020-12-17.csv
 ```
 
-The output JSON and CSV files are useful as inputs for reporting.
+The output JSON and CSV files are useful as inputs for rendering reports.
 
 ## kubectl-count.sh
 
