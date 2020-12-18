@@ -1,1 +1,4 @@
 counts
+clusterdata
+*.json
+*.csv
