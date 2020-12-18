@@ -25,6 +25,15 @@ fieldsforcluster() {
     capability=$(echo ${clusters} | jq -r '.[] | select (.clusterName=="'${linecluster}'").capability')
     minInstances=$(echo ${clusters} | jq -r '.[] | select (.clusterName=="'${linecluster}'").minInstances')
     maxInstances=$(echo ${clusters} | jq -r '.[] | select (.clusterName=="'${linecluster}'").maxInstances')
+
+    # Strip surrounding quotes if value of capability was encoded json
+    if [[ $capability == ""* ]]; then
+        capability="${capability:1}"
+    fi
+    if [[ $capability == *"" ]]; then
+        capability="${capability::-1}"
+    fi
+
 }
 
 jsonforcluster() {
@@ -86,6 +95,9 @@ dateofreport=$(date '+%Y-%m-%d')
 # # CATALOG_URL represents the endpoint of the catalog service to get the clusters for a mesh
 CATALOG_URL="https://${MESH_NAME}/services/catalog/latest/clusters"
 
+# covidapihub.io uses this instead. Other meshes fronted with a splash screen may deploy similarly.
+# CATALOG_URL="https://${MESH_NAME}/catalog/latest/clusters"
+
 # JSON_FILE and CSV_FILE are file names to use for output
 JSON_FILE="${MESH_NAME}-license-counts.${dateofreport}.json"
 CSV_FILE="${MESH_NAME}-license-counts.${dateofreport}.csv"
@@ -93,6 +105,8 @@ CSV_FILE="${MESH_NAME}-license-counts.${dateofreport}.csv"
 # =====================================================================================================================
 # Fetch data
 clusters=$(curl -s -S -k ${KEYPATH} ${CERTPATH} ${CATALOG_URL})
+
+# covidapihub uses owner of 'Decipher Technology Studios'
 # Clusters that are customer specific using data
 customerdata=$(echo ${clusters} | jq -r '.[] | select (.owner!="Decipher" and .capability=="Data").clusterName')
 # Clusters that are customer specific microservices
@@ -126,6 +140,8 @@ echo "   \"fabric\": {" >> ${JSON_FILE}
 fabriccount=0
 while read -r linecluster
 do
+    # covidapihub.io has edge.edge
+
     isfabric=0
     if [[ $linecluster == "control-api" ]]; then
         isfabric=1
@@ -156,6 +172,8 @@ echo "   \"sense\": {" >> ${JSON_FILE}
 sensecount=0
 while read -r linecluster
 do
+    # covidapihub.io has   sense.prometheus, sense.catalog
+
     issense=0
     if [[ $linecluster == "catalog" ]]; then
         issense=1
@@ -185,12 +203,14 @@ echo "   \"data\": {" >> ${JSON_FILE}
 datacount=0
 while read -r linecluster
 do
-    if [[ datacount -gt 0 ]]; then
-        echo "      ," >> ${JSON_FILE}
+    if [ -n "$linecluster" ]; then
+        if [[ datacount -gt 0 ]]; then
+            echo "      ," >> ${JSON_FILE}
+        fi
+        jsonforcluster
+        csvforcluster
+        datacount=$((datacount+1))
     fi
-    jsonforcluster
-    csvforcluster
-    datacount=$((datacount+1))
 done < <(printf '%s\n' "$customerdata")
 echo "   }," >> ${JSON_FILE}
 
@@ -202,12 +222,14 @@ echo "   \"microservices\": {" >> ${JSON_FILE}
 microservicecount=0
 while read -r linecluster
 do
-    if [[ microservicecount -gt 0 ]]; then
-        echo "      ," >> ${JSON_FILE}
+    if [ -n "$linecluster" ]; then
+        if [[ microservicecount -gt 0 ]]; then
+            echo "      ," >> ${JSON_FILE}
+        fi
+        jsonforcluster
+        csvforcluster
+        microservicecount=$((microservicecount+1))
     fi
-    jsonforcluster
-    csvforcluster
-    microservicecount=$((microservicecount+1))
 done < <(printf '%s\n' "$customermicroservices")
 echo "   }," >> ${JSON_FILE}
 
